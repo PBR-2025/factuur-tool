@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+  <title>Factuur Tool</title>
+
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --bg-soft: #e5e7eb;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --input-bg: #ffffff;
+      --input-text: #111827;
+      --accent: #2563eb;
+      --accent-2: #1d4ed8;
+      --accent-soft: rgba(37, 99, 235, 0.12);
+      --danger: #dc2626;
+      --danger-2: #b91c1c;
+      --success: #059669;
+      --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+      --upload-dash: #94a3b8;
+    }
+
+    html.dark {
+      --bg: #0b1220;
+      --bg-soft: #111827;
+      --card: #111827;
+      --text: #f9fafb;
+      --muted: #cbd5e1;
+      --border: #334155;
+      --input-bg: #0f172a;
+      --input-text: #f9fafb;
+      --accent: #60a5fa;
+      --accent-2: #3b82f6;
+      --accent-soft: rgba(96, 165, 250, 0.16);
+      --danger: #f87171;
+      --danger-2: #ef4444;
+      --success: #34d399;
+      --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+      --upload-dash: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      background: var(--bg);
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+        Arial, sans-serif;
+      line-height: 1.4;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: max(14px, env(safe-area-inset-top)) 14px
+        max(20px, env(safe-area-inset-bottom)) 14px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .title-wrap {
+      min-width: 0;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      margin: 4px 0 0;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    .theme-btn {
+      flex-shrink: 0;
+      appearance: none;
+      -webkit-appearance: none;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      padding: 11px 14px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+
+    .helper {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .field-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    @media (min-width: 640px) {
+      .field-grid.two-col {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .field {
+      display: block;
+    }
+
+    .label {
+      display: block;
+      margin: 0 0 7px;
+      font-size: 0.93rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    input,
+    button {
+      font: inherit;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="file"] {
+      width: 100%;
+      min-height: 50px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--input-text);
+      padding: 13px 14px;
+      font-size: 16px; /* voorkomt zoom op iPhone */
+      outline: none;
+      box-shadow: none;
+    }
+
+    input::placeholder {
+      color: var(--muted);
+      opacity: 1;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-soft);
+    }
+
+    .upload-box {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      min-height: 158px;
+      border: 2px dashed var(--upload-dash);
+      border-radius: 18px;
+      background: linear-gradient(180deg, var(--input-bg), var(--card));
+      padding: 18px;
+      cursor: pointer;
+      transition: border-color 0.18s ease, background 0.18s ease,
+        transform 0.18s ease;
+    }
+
+    .upload-box:active {
+      transform: scale(0.997);
+    }
+
+    .upload-box strong {
+      display: block;
+      font-size: 1rem;
+      margin-bottom: 5px;
+    }
+
+    .upload-box span {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .preview-wrap {
+      margin-top: 12px;
+    }
+
+    .preview {
+      display: none;
+      width: 100%;
+      max-height: 340px;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--input-bg);
+      cursor: zoom-in;
+    }
+
+    .pdf-pill {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .totals-bar {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    @media (min-width: 640px) {
+      .totals-bar {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .metric {
+      background: linear-gradient(180deg, var(--input-bg), var(--card));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .metric-label {
+      margin: 0 0 6px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .metric-value {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .people-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .person-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 96px;
+      gap: 10px;
+      align-items: start;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: linear-gradient(180deg, var(--input-bg), var(--card));
+      padding: 12px;
+    }
+
+    .person-main {
+      min-width: 0;
+    }
+
+    .person-name {
+      margin-bottom: 8px;
+    }
+
+    .person-bottom {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    @media (min-width: 480px) {
+      .person-bottom {
+        grid-template-columns: 120px 1fr;
+      }
+    }
+
+    .amount-box {
+      display: grid;
+      align-content: center;
+      min-height: 50px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+
+    .amount-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+
+    .amount-value {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      word-break: break-word;
+    }
+
+    .remove-btn {
+      appearance: none;
+      -webkit-appearance: none;
+      border: none;
+      min-height: 50px;
+      width: 100%;
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--danger), var(--danger-2));
+      color: white;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .actions {
+      display: grid;
+      gap: 10px;
+    }
+
+    @media (min-width: 520px) {
+      .actions {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .btn {
+      appearance: none;
+      -webkit-appearance: none;
+      border: none;
+      min-height: 52px;
+      width: 100%;
+      border-radius: 16px;
+      padding: 12px 14px;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, var(--accent), var(--accent-2));
+      color: #ffffff;
+    }
+
+    .btn-secondary {
+      background: var(--bg-soft);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .status-note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .zoom-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 9999;
+    }
+
+    .zoom-modal.open {
+      display: flex;
+    }
+
+    .zoom-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 14px;
+      background: white;
+    }
+
+    .zoom-close {
+      position: absolute;
+      top: max(14px, env(safe-area-inset-top));
+      right: 14px;
+      appearance: none;
+      -webkit-appearance: none;
+      border: none;
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
+      color: white;
+      font-size: 22px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .print-sheet {
+      display: none;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 12mm;
+    }
+
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+
+      body * {
+        visibility: hidden !important;
+      }
+
+      .print-sheet,
+      .print-sheet * {
+        visibility: visible !important;
+      }
+
+      .print-sheet {
+        display: block !important;
+        position: absolute;
+        inset: 0;
+        background: #ffffff;
+        color: #000000;
+        padding: 0;
+      }
+
+      .print-page {
+        width: 100%;
+        min-height: auto;
+        color: #000000;
+        font-size: 12pt;
+      }
+
+      .print-head {
+        margin-bottom: 14px;
+      }
+
+      .print-title {
+        margin: 0 0 6px;
+        font-size: 22pt;
+        font-weight: 800;
+      }
+
+      .print-sub {
+        margin: 2px 0;
+        font-size: 11pt;
+      }
+
+      .print-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: 14px 0;
+      }
+
+      .print-box {
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        padding: 10px;
+      }
+
+      .print-box-label {
+        font-size: 9.5pt;
+        color: #4b5563;
+        margin-bottom: 4px;
+      }
+
+      .print-box-value {
+        font-size: 13pt;
+        font-weight: 700;
+      }
+
+      .print-section-title {
+        margin: 18px 0 8px;
+        font-size: 14pt;
+        font-weight: 800;
+      }
+
+      .print-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .print-table th,
+      .print-table td {
+        border-bottom: 1px solid #e5e7eb;
+        padding: 8px 6px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .print-table th:last-child,
+      .print-table td:last-child {
+        text-align: right;
+      }
+
+      .print-image-wrap {
+        margin-top: 18px;
+        page-break-inside: avoid;
+      }
+
+      .print-image {
+        max-width: 100%;
+        max-height: 420px;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        object-fit: contain;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="title-wrap">
+        <h1 class="title">Factuur Tool</h1>
+        <p class="subtitle">Bon uploaden, uren verdelen en als PDF bewaren</p>
+      </div>
+      <button type="button" id="themeBtn" class="theme-btn" aria-label="Wissel thema">
+        🌙 Donker
+      </button>
+    </div>
+
+    <section class="card">
+      <h2 class="section-title">Bon uploaden</h2>
+      <div id="uploadBox" class="upload-box" role="button" tabindex="0" aria-controls="fileInput">
+        <div>
+          <strong>Kies bonbestand</strong>
+          <span>Afbeelding of PDF. Afbeeldingen tonen direct een preview.</span>
+        </div>
+      </div>
+      <input
+        id="fileInput"
+        type="file"
+        accept="image/*,.pdf,application/pdf"
+        style="display: none"
+      />
+      <div class="preview-wrap">
+        <img id="preview" class="preview" alt="Preview van geüploade bon" />
+        <div id="pdfPill" class="pdf-pill">PDF geselecteerd</div>
+      </div>
+      <p class="helper">
+        Tik op de preview om groter te bekijken.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Bongegevens</h2>
+
+      <div class="field-grid two-col">
+        <label class="field">
+          <span class="label">Weeknummer</span>
+          <input
+            id="week"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="Bijv. 21"
+          />
+        </label>
+
+        <label class="field">
+          <span class="label">Bonnummer</span>
+          <input
+            id="bon"
+            type="text"
+            autocomplete="off"
+            placeholder="Bijv. BON-2026-021"
+          />
+        </label>
+      </div>
+
+      <div class="field-grid two-col">
+        <label class="field">
+          <span class="label">Totaal bedrag</span>
+          <input
+            id="totaal"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            placeholder="Bijv. 1250,50"
+          />
+        </label>
+
+        <label class="field">
+          <span class="label">Totaal uren</span>
+          <input
+            id="uren"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            placeholder="Bijv. 40"
+          />
+        </label>
+      </div>
+
+      <div class="totals-bar">
+        <div class="metric">
+          <p class="metric-label">Uurtarief</p>
+          <p class="metric-value">€ <span id="tarief">0.00</span></p>
+        </div>
+        <div class="metric">
+          <p class="metric-label">Verdeling uren</p>
+          <p class="metric-value"><span id="urenVerdeling">0.00</span> uur</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Personen</h2>
+      <div id="peopleList" class="people-list"></div>
+      <div class="actions" style="margin-top: 12px;">
+        <button type="button" id="addPersonBtn" class="btn btn-secondary">
+          ➕ Persoon toevoegen
+        </button>
+      </div>
+      <p class="status-note">
+        Vul per persoon de naam en uren in. Bedragen worden automatisch berekend.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">Export</h2>
+      <div class="actions">
+        <button type="button" id="pdfBtn" class="btn btn-primary">
+          🧾 Exporteer naar PDF
+        </button>
+      </div>
+      <p class="status-note">
+        De browser opent het printvenster. Kies daar “Bewaar als PDF”.
+      </p>
+    </section>
+  </div>
+
+  <div id="zoomModal" class="zoom-modal" aria-hidden="true">
+    <button type="button" id="zoomClose" class="zoom-close" aria-label="Sluiten">×</button>
+    <img id="zoomImg" class="zoom-img" alt="Vergrote bonpreview" />
+  </div>
+
+  <div id="printSheet" class="print-sheet">
+    <div class="print-page">
+      <div class="print-head">
+        <h1 class="print-title">Factuuroverzicht</h1>
+        <p id="printWeek" class="print-sub"></p>
+        <p id="printBon" class="print-sub"></p>
+      </div>
+
+      <div class="print-grid">
+        <div class="print-box">
+          <div class="print-box-label">Totaal bedrag</div>
+          <div id="printTotaal" class="print-box-value"></div>
+        </div>
+        <div class="print-box">
+          <div class="print-box-label">Totaal uren</div>
+          <div id="printUren" class="print-box-value"></div>
+        </div>
+        <div class="print-box">
+          <div class="print-box-label">Uurtarief</div>
+          <div id="printTarief" class="print-box-value"></div>
+        </div>
+        <div class="print-box">
+          <div class="print-box-label">Ingevulde uren personen</div>
+          <div id="printUrenVerdeling" class="print-box-value"></div>
+        </div>
+      </div>
+
+      <h2 class="print-section-title">Verdeling</h2>
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th>Naam</th>
+            <th>Uren</th>
+            <th>Bedrag</th>
+          </tr>
+        </thead>
+        <tbody id="printPeopleBody"></tbody>
+      </table>
+
+      <div id="printImageWrap" class="print-image-wrap" style="display: none;">
+        <h2 class="print-section-title">Bon</h2>
+        <img id="printImage" class="print-image" alt="Bon" />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const root = document.documentElement;
+
+      const themeBtn = document.getElementById("themeBtn");
+
+      const uploadBox = document.getElementById("uploadBox");
+      const fileInput = document.getElementById("fileInput");
+      const preview = document.getElementById("preview");
+      const pdfPill = document.getElementById("pdfPill");
+
+      const weekInput = document.getElementById("week");
+      const bonInput = document.getElementById("bon");
+      const totaalInput = document.getElementById("totaal");
+      const urenInput = document.getElementById("uren");
+
+      const tariefEl = document.getElementById("tarief");
+      const urenVerdelingEl = document.getElementById("urenVerdeling");
+
+      const peopleList = document.getElementById("peopleList");
+      const addPersonBtn = document.getElementById("addPersonBtn");
+      const pdfBtn = document.getElementById("pdfBtn");
+
+      const zoomModal = document.getElementById("zoomModal");
+      const zoomImg = document.getElementById("zoomImg");
+      const zoomClose = document.getElementById("zoomClose");
+
+      const printWeek = document.getElementById("printWeek");
+      const printBon = document.getElementById("printBon");
+      const printTotaal = document.getElementById("printTotaal");
+      const printUren = document.getElementById("printUren");
+      const printTarief = document.getElementById("printTarief");
+      const printUrenVerdeling = document.getElementById("printUrenVerdeling");
+      const printPeopleBody = document.getElementById("printPeopleBody");
+      const printImageWrap = document.getElementById("printImageWrap");
+      const printImage = document.getElementById("printImage");
+
+      let personCounter = 1;
+      let activeObjectUrl = null;
+
+      function getCurrentIsoWeek() {
+        const date = new Date();
+        const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        const dayNum = utcDate.getUTCDay() || 7;
+        utcDate.setUTCDate(utcDate.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
+        return Math.ceil((((utcDate - yearStart) / 86400000) + 1) / 7);
+      }
+
+      function setThemeLabel() {
+        themeBtn.textContent = root.classList.contains("dark") ? "☀️ Licht" : "🌙 Donker";
+      }
+
+      function loadTheme() {
+        const saved = localStorage.getItem("factuur-theme");
+        if (saved === "dark") {
+          root.classList.add("dark");
+        } else {
+          root.classList.remove("dark");
+        }
+        setThemeLabel();
+      }
+
+      function saveTheme() {
+        localStorage.setItem(
+          "factuur-theme",
+          root.classList.contains("dark") ? "dark" : "light"
+        );
+      }
+
+      function toggleTheme() {
+        root.classList.toggle("dark");
+        saveTheme();
+        setThemeLabel();
+      }
+
+      function parseNumber(value) {
+        const normalized = String(value || "")
+          .trim()
+          .replace(/\s/g, "")
+          .replace(",", ".");
+        const cleaned = normalized.replace(/[^0-9.-]/g, "");
+        const num = parseFloat(cleaned);
+        return Number.isFinite(num) ? num : 0;
+      }
+
+      function formatMoney(value) {
+        return value.toFixed(2);
+      }
+
+      function formatHours(value) {
+        return value.toFixed(2);
+      }
+
+      function getPersonRows() {
+        return Array.from(peopleList.querySelectorAll(".person-row"));
+      }
+
+      function recalc() {
+        const totaal = parseNumber(totaalInput.value);
+        const uren = parseNumber(urenInput.value);
+        const tarief = uren > 0 ? totaal / uren : 0;
+
+        tariefEl.textContent = formatMoney(tarief);
+
+        let filledHours = 0;
+
+        getPersonRows().forEach(function (row) {
+          const hoursInput = row.querySelector(".person-hours");
+          const amountValue = row.querySelector(".amount-value");
+          const personHours = parseNumber(hoursInput.value);
+          const amount = personHours * tarief;
+
+          filledHours += personHours;
+          amountValue.textContent = "€ " + formatMoney(amount);
+        });
+
+        urenVerdelingEl.textContent = formatHours(filledHours);
+      }
+
+      function createPersonRow(name, hours) {
+        const row = document.createElement("div");
+        row.className = "person-row";
+
+        row.innerHTML = `
+          <div class="person-main">
+            <input
+              class="person-name person-name-input"
+              type="text"
+              autocomplete="off"
+              placeholder="Naam ${personCounter}"
+              value="${name ? escapeHtml(name) : ""}"
+            />
+            <div class="person-bottom">
+              <input
+                class="person-hours"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="Uren"
+                value="${hours ? escapeHtml(hours) : ""}"
+              />
+              <div class="amount-box">
+                <div class="amount-label">Bedrag</div>
+                <div class="amount-value">€ 0.00</div>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="remove-btn"
+            aria-label="Verwijder persoon"
+            title="Verwijderen"
+          >✕</button>
+        `;
+
+        personCounter += 1;
+        peopleList.appendChild(row);
+        recalc();
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function openFilePicker() {
+        fileInput.click();
+      }
+
+      function handleFileSelection() {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+
+        if (activeObjectUrl) {
+          URL.revokeObjectURL(activeObjectUrl);
+          activeObjectUrl = null;
+        }
+
+        const isImage = file.type && file.type.startsWith("image/");
+        const isPdf =
+          file.type === "application/pdf" ||
+          /\.pdf$/i.test(file.name || "");
+
+        uploadBox.innerHTML = `
+          <div>
+            <strong>${escapeHtml(file.name || "Bestand geselecteerd")}</strong>
+            <span>${isImage ? "Afbeelding geladen" : isPdf ? "PDF geladen" : "Bestand geladen"}</span>
+          </div>
+        `;
+
+        if (isImage) {
+          activeObjectUrl = URL.createObjectURL(file);
+          preview.src = activeObjectUrl;
+          preview.style.display = "block";
+          pdfPill.style.display = "none";
+        } else {
+          preview.removeAttribute("src");
+          preview.style.display = "none";
+          pdfPill.style.display = isPdf ? "block" : "none";
+        }
+      }
+
+      function openZoom() {
+        if (!preview.src) return;
+        zoomImg.src = preview.src;
+        zoomModal.classList.add("open");
+        zoomModal.setAttribute("aria-hidden", "false");
+      }
+
+      function closeZoom() {
+        zoomModal.classList.remove("open");
+        zoomModal.setAttribute("aria-hidden", "true");
+        zoomImg.removeAttribute("src");
+      }
+
+      function buildPrintTable() {
+        printPeopleBody.innerHTML = "";
+
+        getPersonRows().forEach(function (row) {
+          const name =
+            row.querySelector(".person-name").value.trim() || "-";
+          const hours =
+            row.querySelector(".person-hours").value.trim() || "0";
+          const amount =
+            row.querySelector(".amount-value").textContent.trim() || "€ 0.00";
+
+          const tr = document.createElement("tr");
+
+          const tdName = document.createElement("td");
+          const tdHours = document.createElement("td");
+          const tdAmount = document.createElement("td");
+
+          tdName.textContent = name;
+          tdHours.textContent = hours;
+          tdAmount.textContent = amount;
+
+          tr.appendChild(tdName);
+          tr.appendChild(tdHours);
+          tr.appendChild(tdAmount);
+
+          printPeopleBody.appendChild(tr);
+        });
+      }
+
+      function buildPrintView() {
+        printWeek.textContent = "Weeknummer: " + (weekInput.value.trim() || "-");
+        printBon.textContent = "Bonnummer: " + (bonInput.value.trim() || "-");
+
+        const totaal = parseNumber(totaalInput.value);
+        const uren = parseNumber(urenInput.value);
+
+        printTotaal.textContent = "€ " + formatMoney(totaal);
+        printUren.textContent = formatHours(uren) + " uur";
+        printTarief.textContent = "€ " + tariefEl.textContent;
+        printUrenVerdeling.textContent =
+          urenVerdelingEl.textContent + " uur";
+
+        buildPrintTable();
+
+        if (preview.src) {
+          printImage.src = preview.src;
+          printImageWrap.style.display = "block";
+        } else {
+          printImage.removeAttribute("src");
+          printImageWrap.style.display = "none";
+        }
+      }
+
+      function exportPdf() {
+        buildPrintView();
+        window.print();
+      }
+
+      function handleDocumentInput(event) {
+        const target = event.target;
+        if (
+          target === totaalInput ||
+          target === urenInput ||
+          target.classList.contains("person-hours")
+        ) {
+          recalc();
+        }
+      }
+
+      function handlePeopleClick(event) {
+        const removeBtn = event.target.closest(".remove-btn");
+        if (!removeBtn) return;
+
+        const row = removeBtn.closest(".person-row");
+        if (row) {
+          row.remove();
+          recalc();
+        }
+      }
+
+      themeBtn.addEventListener("click", toggleTheme);
+
+      uploadBox.addEventListener("click", openFilePicker);
+      uploadBox.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openFilePicker();
+        }
+      });
+
+      fileInput.addEventListener("change", handleFileSelection);
+
+      preview.addEventListener("click", openZoom);
+      zoomClose.addEventListener("click", closeZoom);
+      zoomModal.addEventListener("click", function (event) {
+        if (event.target === zoomModal) {
+          closeZoom();
+        }
+      });
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          closeZoom();
+        }
+      });
+
+      addPersonBtn.addEventListener("click", function () {
+        createPersonRow("", "");
+      });
+
+      peopleList.addEventListener("click", handlePeopleClick);
+
+      document.addEventListener("input", handleDocumentInput);
+      document.addEventListener("change", handleDocumentInput);
+      document.addEventListener("keyup", handleDocumentInput);
+
+      pdfBtn.addEventListener("click", exportPdf);
+
+      loadTheme();
+
+      weekInput.value = String(getCurrentIsoWeek());
+      createPersonRow("Naam 1", "");
+      createPersonRow("Naam 2", "");
+      recalc();
+    });
+  </script>
+</body>
+</html>
