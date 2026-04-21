@@ -174,7 +174,7 @@
       background: var(--input-bg);
       color: var(--input-text);
       padding: 13px 14px;
-      font-size: 16px; /* voorkomt zoom op iPhone */
+      font-size: 16px;
       outline: none;
       box-shadow: none;
     }
@@ -444,6 +444,27 @@
       display: none;
     }
 
+    .pdf-render-mode {
+      display: block !important;
+      position: fixed !important;
+      left: -10000px !important;
+      top: 0 !important;
+      width: 794px !important;
+      background: #ffffff !important;
+      color: #000000 !important;
+      z-index: -1 !important;
+      visibility: visible !important;
+      padding: 0 !important;
+    }
+
+    .pdf-render-mode .print-page {
+      width: 794px !important;
+      min-height: 1123px !important;
+      background: #ffffff !important;
+      color: #000000 !important;
+      padding: 0 !important;
+    }
+
     @page {
       size: A4 portrait;
       margin: 12mm;
@@ -544,19 +565,106 @@
       }
 
       .print-image-wrap {
-        margin-top: 18px;
+        margin-top: 14px;
         page-break-inside: avoid;
+        break-inside: avoid;
       }
 
       .print-image {
-        max-width: 100%;
-        max-height: 420px;
+        width: 100%;
+        max-height: 220px;
+        object-fit: contain;
         border: 1px solid #d1d5db;
         border-radius: 10px;
-        object-fit: contain;
       }
     }
+
+    .print-page {
+      color: #000000;
+      font-size: 12pt;
+      background: #ffffff;
+    }
+
+    .print-head {
+      margin-bottom: 14px;
+    }
+
+    .print-title {
+      margin: 0 0 6px;
+      font-size: 22pt;
+      font-weight: 800;
+    }
+
+    .print-sub {
+      margin: 2px 0;
+      font-size: 11pt;
+    }
+
+    .print-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .print-box {
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .print-box-label {
+      font-size: 9.5pt;
+      color: #4b5563;
+      margin-bottom: 4px;
+    }
+
+    .print-box-value {
+      font-size: 13pt;
+      font-weight: 700;
+    }
+
+    .print-section-title {
+      margin: 18px 0 8px;
+      font-size: 14pt;
+      font-weight: 800;
+    }
+
+    .print-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .print-table th,
+    .print-table td {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 8px 6px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .print-table th:last-child,
+    .print-table td:last-child {
+      text-align: right;
+    }
+
+    .print-image-wrap {
+      margin-top: 14px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .print-image {
+      width: 100%;
+      max-height: 220px;
+      object-fit: contain;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+    }
   </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
   <div class="app">
@@ -671,12 +779,15 @@
     <section class="card">
       <h2 class="section-title">Export</h2>
       <div class="actions">
-        <button type="button" id="pdfBtn" class="btn btn-primary">
-          🧾 Exporteer naar PDF
+        <button type="button" id="pdfDownloadBtn" class="btn btn-primary">
+          📄 Opslaan als PDF
+        </button>
+        <button type="button" id="pdfBtn" class="btn btn-secondary">
+          🖨️ Print / systeem-PDF
         </button>
       </div>
       <p class="status-note">
-        De browser opent het printvenster. Kies daar “Bewaar als PDF”.
+        De eerste knop maakt direct een PDF-bestand. De tweede gebruikt de normale print/PDF van je browser als fallback.
       </p>
     </section>
   </div>
@@ -689,7 +800,7 @@
   <div id="printSheet" class="print-sheet">
     <div class="print-page">
       <div class="print-head">
-        <h1 class="print-title">Factuuroverzicht</h1>
+        <h1 class="print-title">Uren berekening</h1>
         <p id="printWeek" class="print-sub"></p>
         <p id="printBon" class="print-sub"></p>
       </div>
@@ -754,11 +865,13 @@
       const peopleList = document.getElementById("peopleList");
       const addPersonBtn = document.getElementById("addPersonBtn");
       const pdfBtn = document.getElementById("pdfBtn");
+      const pdfDownloadBtn = document.getElementById("pdfDownloadBtn");
 
       const zoomModal = document.getElementById("zoomModal");
       const zoomImg = document.getElementById("zoomImg");
       const zoomClose = document.getElementById("zoomClose");
 
+      const printSheet = document.getElementById("printSheet");
       const printWeek = document.getElementById("printWeek");
       const printBon = document.getElementById("printBon");
       const printTotaal = document.getElementById("printTotaal");
@@ -1005,9 +1118,102 @@
         }
       }
 
-      function exportPdf() {
+      function buildFilename() {
+        const week = (weekInput.value || "").trim();
+        const bon = (bonInput.value || "").trim();
+
+        let filename = "uren-berekening";
+        if (week) filename += "-week-" + week;
+        if (bon) filename += "-" + bon;
+
+        return filename.replace(/[\\/:*?"<>|#%&{}$!'@+=`~]/g, "-");
+      }
+
+      function exportPdfPrint() {
         buildPrintView();
-        window.print();
+
+        const oldTitle = document.title;
+        document.title = buildFilename();
+
+        setTimeout(function () {
+          window.print();
+          setTimeout(function () {
+            document.title = oldTitle;
+          }, 500);
+        }, 100);
+      }
+
+      async function exportPdfDirect() {
+        if (
+          typeof window.html2canvas === "undefined" ||
+          typeof window.jspdf === "undefined" ||
+          !window.jspdf.jsPDF
+        ) {
+          exportPdfPrint();
+          return;
+        }
+
+        const originalBtnText = pdfDownloadBtn.textContent;
+        pdfDownloadBtn.disabled = true;
+        pdfDownloadBtn.textContent = "PDF maken...";
+
+        try {
+          buildPrintView();
+
+          printSheet.classList.add("pdf-render-mode");
+
+          await new Promise(function (resolve) {
+            requestAnimationFrame(function () {
+              requestAnimationFrame(resolve);
+            });
+          });
+
+          const target = printSheet.querySelector(".print-page");
+
+          const canvas = await window.html2canvas(target, {
+            scale: 2,
+            backgroundColor: "#ffffff",
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            imageTimeout: 0
+          });
+
+          const imgData = canvas.toDataURL("image/jpeg", 0.95);
+          const pdf = new window.jspdf.jsPDF({
+            orientation: "p",
+            unit: "mm",
+            format: "a4",
+            compress: true
+          });
+
+          const pageWidth = pdf.internal.pageSize.getWidth();
+          const pageHeight = pdf.internal.pageSize.getHeight();
+          const margin = 12;
+
+          const usableWidth = pageWidth - margin * 2;
+          const usableHeight = pageHeight - margin * 2;
+
+          const imgWidth = canvas.width;
+          const imgHeight = canvas.height;
+
+          const scale = Math.min(usableWidth / imgWidth, usableHeight / imgHeight);
+          const renderWidth = imgWidth * scale;
+          const renderHeight = imgHeight * scale;
+
+          const x = (pageWidth - renderWidth) / 2;
+          const y = margin;
+
+          pdf.addImage(imgData, "JPEG", x, y, renderWidth, renderHeight, undefined, "FAST");
+          pdf.save(buildFilename() + ".pdf");
+        } catch (error) {
+          console.error(error);
+          exportPdfPrint();
+        } finally {
+          printSheet.classList.remove("pdf-render-mode");
+          pdfDownloadBtn.disabled = false;
+          pdfDownloadBtn.textContent = originalBtnText;
+        }
       }
 
       function handleDocumentInput(event) {
@@ -1067,7 +1273,8 @@
       document.addEventListener("change", handleDocumentInput);
       document.addEventListener("keyup", handleDocumentInput);
 
-      pdfBtn.addEventListener("click", exportPdf);
+      pdfBtn.addEventListener("click", exportPdfPrint);
+      pdfDownloadBtn.addEventListener("click", exportPdfDirect);
 
       loadTheme();
 
