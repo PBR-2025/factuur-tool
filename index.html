@@ -1144,73 +1144,144 @@
       }
 
       async function exportPdfDirect() {
-        if (
-          typeof window.html2canvas === "undefined" ||
-          typeof window.jspdf === "undefined" ||
-          !window.jspdf.jsPDF
-        ) {
+        if (typeof window.jspdf === "undefined" || !window.jspdf.jsPDF) {
           exportPdfPrint();
           return;
         }
-
+      
         const originalBtnText = pdfDownloadBtn.textContent;
         pdfDownloadBtn.disabled = true;
         pdfDownloadBtn.textContent = "PDF maken...";
-
+      
         try {
-          buildPrintView();
-
-          printSheet.classList.add("pdf-render-mode");
-
-          await new Promise(function (resolve) {
-            requestAnimationFrame(function () {
-              requestAnimationFrame(resolve);
-            });
-          });
-
-          const target = printSheet.querySelector(".print-page");
-
-          const canvas = await window.html2canvas(target, {
-            scale: 2,
-            backgroundColor: "#ffffff",
-            useCORS: true,
-            allowTaint: true,
-            logging: false,
-            imageTimeout: 0
-          });
-
-          const imgData = canvas.toDataURL("image/jpeg", 0.95);
-          const pdf = new window.jspdf.jsPDF({
-            orientation: "p",
-            unit: "mm",
-            format: "a4",
-            compress: true
-          });
-
+          recalc();
+      
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF("p", "mm", "a4");
+      
+          const margin = 15;
           const pageWidth = pdf.internal.pageSize.getWidth();
           const pageHeight = pdf.internal.pageSize.getHeight();
-          const margin = 12;
-
           const usableWidth = pageWidth - margin * 2;
-          const usableHeight = pageHeight - margin * 2;
-
-          const imgWidth = canvas.width;
-          const imgHeight = canvas.height;
-
-          const scale = Math.min(usableWidth / imgWidth, usableHeight / imgHeight);
-          const renderWidth = imgWidth * scale;
-          const renderHeight = imgHeight * scale;
-
-          const x = (pageWidth - renderWidth) / 2;
-          const y = margin;
-
-          pdf.addImage(imgData, "JPEG", x, y, renderWidth, renderHeight, undefined, "FAST");
-          pdf.save(buildFilename() + ".pdf");
-        } catch (error) {
-          console.error(error);
+      
+          let y = 20;
+      
+          // Titel
+          pdf.setFontSize(18);
+          pdf.text("Uren berekening", margin, y);
+          y += 10;
+      
+          // Basis info
+          pdf.setFontSize(11);
+          pdf.text("Week: " + (weekInput.value || "-"), margin, y);
+          y += 6;
+          pdf.text("Bon: " + (bonInput.value || "-"), margin, y);
+          y += 10;
+      
+          // Totalen
+          pdf.text("Totaal bedrag: € " + totaalInput.value, margin, y);
+          y += 6;
+          pdf.text("Totaal uren: " + urenInput.value, margin, y);
+          y += 6;
+          pdf.text("Uurtarief: € " + tariefEl.textContent, margin, y);
+          y += 10;
+      
+          // Header
+          pdf.setFontSize(12);
+          pdf.text("Naam", margin, y);
+          pdf.text("Uren", 100, y);
+          pdf.text("Bedrag", 150, y);
+          y += 6;
+      
+          pdf.setFontSize(10);
+      
+          getPersonRows().forEach(row => {
+            const name = row.querySelector(".person-name").value || "-";
+            const hours = row.querySelector(".person-hours").value || "0";
+            const amount = row.querySelector(".amount-value").textContent || "€0";
+      
+            pdf.text(name, margin, y);
+            pdf.text(hours, 100, y);
+            pdf.text(amount, 150, y);
+            y += 6;
+          });
+      
+          // 🔥 BON (ALTJD SCHERP)
+          if (uploadedFile) {
+            let imgData = null;
+      
+            // IMAGE BESTAND
+            if (uploadedFile.type.startsWith("image/")) {
+              const img = new Image();
+              img.src = URL.createObjectURL(uploadedFile);
+      
+              await new Promise(res => (img.onload = res));
+      
+              const canvas = document.createElement("canvas");
+              const ctx = canvas.getContext("2d");
+      
+              const scale = 2; // 🔥 scherpte
+              canvas.width = img.width * scale;
+              canvas.height = img.height * scale;
+      
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+              imgData = canvas.toDataURL("image/png");
+            }
+      
+            // PDF OF ANDER BESTAND → fallback = preview gebruiken
+            else if (preview.src) {
+              const img = new Image();
+              img.src = preview.src;
+      
+              await new Promise(res => (img.onload = res));
+      
+              const canvas = document.createElement("canvas");
+              const ctx = canvas.getContext("2d");
+      
+              const scale = 2;
+              canvas.width = img.width * scale;
+              canvas.height = img.height * scale;
+      
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      
+              imgData = canvas.toDataURL("image/png");
+            }
+      
+            if (imgData) {
+              const img = new Image();
+              img.src = imgData;
+      
+              await new Promise(res => (img.onload = res));
+      
+              const maxWidth = usableWidth;
+              const maxHeight = 90;
+      
+              const ratio = Math.min(
+                maxWidth / img.width,
+                maxHeight / img.height
+              );
+      
+              const w = img.width * ratio;
+              const h = img.height * ratio;
+      
+              y += 10;
+              pdf.text("Bon:", margin, y);
+              y += 4;
+      
+              pdf.addImage(imgData, "PNG", margin, y, w, h);
+            }
+          }
+      
+          let filename = "uren-berekening";
+          if (weekInput.value) filename += "-week-" + weekInput.value;
+          if (bonInput.value) filename += "-" + bonInput.value;
+      
+          pdf.save(filename + ".pdf");
+        } catch (e) {
+          console.error(e);
           exportPdfPrint();
         } finally {
-          printSheet.classList.remove("pdf-render-mode");
           pdfDownloadBtn.disabled = false;
           pdfDownloadBtn.textContent = originalBtnText;
         }
