@@ -884,6 +884,7 @@
 
       let personCounter = 1;
       let activeObjectUrl = null;
+      let uploadedFile = null; // 🔥 NIEUW
 
       function getCurrentIsoWeek() {
         const date = new Date();
@@ -1022,6 +1023,8 @@
       function handleFileSelection() {
         const file = fileInput.files && fileInput.files[0];
         if (!file) return;
+
+        uploadedFile = file; // 🔥 NIEUW (HEEL BELANGRIJK)
 
         if (activeObjectUrl) {
           URL.revokeObjectURL(activeObjectUrl);
@@ -1164,21 +1167,26 @@
           const pageHeight = pdf.internal.pageSize.getHeight();
           const usableWidth = pageWidth - margin * 2;
       
+          // 🔥 vaste layout zones
+          const topLimit = 160;   // alles bovenin
+          const imageMaxHeight = 90;
+      
           let y = 20;
       
-          // Titel
-          pdf.setFontSize(18);
+          // ===== HEADER =====
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(20);
           pdf.text("Uren berekening", margin, y);
           y += 10;
       
-          // Basis info
-          pdf.setFontSize(11);
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(12);
+      
           pdf.text("Week: " + (weekInput.value || "-"), margin, y);
           y += 6;
           pdf.text("Bon: " + (bonInput.value || "-"), margin, y);
           y += 10;
       
-          // Totalen
           pdf.text("Totaal bedrag: € " + totaalInput.value, margin, y);
           y += 6;
           pdf.text("Totaal uren: " + urenInput.value, margin, y);
@@ -1186,16 +1194,23 @@
           pdf.text("Uurtarief: € " + tariefEl.textContent, margin, y);
           y += 10;
       
-          // Header
-          pdf.setFontSize(12);
+          // ===== TABEL =====
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(13);
+          pdf.text("Verdeling", margin, y);
+          y += 6;
+      
+          pdf.setFontSize(11);
           pdf.text("Naam", margin, y);
           pdf.text("Uren", 100, y);
           pdf.text("Bedrag", 150, y);
           y += 6;
       
-          pdf.setFontSize(10);
+          pdf.setFont("helvetica", "normal");
       
           getPersonRows().forEach(row => {
+            if (y > topLimit) return; // 🔥 voorkomt overlap met bon
+      
             const name = row.querySelector(".person-name").value || "-";
             const hours = row.querySelector(".person-hours").value || "0";
             const amount = row.querySelector(".amount-value").textContent || "€0";
@@ -1203,74 +1218,55 @@
             pdf.text(name, margin, y);
             pdf.text(hours, 100, y);
             pdf.text(amount, 150, y);
+      
             y += 6;
           });
       
-          // 🔥 BON (ALTJD SCHERP)
-          if (uploadedFile) {
-            let imgData = null;
+          // ===== BON ALTIJD ONDERAAN =====
+          if (uploadedFile || preview.src) {
+            let img = new Image();
       
-            // IMAGE BESTAND
-            if (uploadedFile.type.startsWith("image/")) {
-              const img = new Image();
+            if (uploadedFile && uploadedFile.type.startsWith("image/")) {
               img.src = URL.createObjectURL(uploadedFile);
-      
-              await new Promise(res => (img.onload = res));
-      
-              const canvas = document.createElement("canvas");
-              const ctx = canvas.getContext("2d");
-      
-              const scale = 2; // 🔥 scherpte
-              canvas.width = img.width * scale;
-              canvas.height = img.height * scale;
-      
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      
-              imgData = canvas.toDataURL("image/png");
-            }
-      
-            // PDF OF ANDER BESTAND → fallback = preview gebruiken
-            else if (preview.src) {
-              const img = new Image();
+            } else {
               img.src = preview.src;
-      
-              await new Promise(res => (img.onload = res));
-      
-              const canvas = document.createElement("canvas");
-              const ctx = canvas.getContext("2d");
-      
-              const scale = 2;
-              canvas.width = img.width * scale;
-              canvas.height = img.height * scale;
-      
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      
-              imgData = canvas.toDataURL("image/png");
             }
       
-            if (imgData) {
-              const img = new Image();
-              img.src = imgData;
+            await new Promise(res => (img.onload = res));
       
-              await new Promise(res => (img.onload = res));
+            // 🔥 hoge kwaliteit render
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
       
-              const maxWidth = usableWidth;
-              const maxHeight = 90;
+            const scale = 2;
+            canvas.width = img.naturalWidth * scale;
+            canvas.height = img.naturalHeight * scale;
       
-              const ratio = Math.min(
-                maxWidth / img.width,
-                maxHeight / img.height
-              );
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       
-              const w = img.width * ratio;
-              const h = img.height * ratio;
+            const imgData = canvas.toDataURL("image/png");
       
-              y += 10;
-              pdf.text("Bon:", margin, y);
-              y += 4;
+            // 🔥 juiste ratio (GEEN stretch)
+            const imgW = img.naturalWidth;
+            const imgH = img.naturalHeight;
       
-              pdf.addImage(imgData, "PNG", margin, y, w, h);
-            }
+            const ratio = Math.min(
+              usableWidth / imgW,
+              imageMaxHeight / imgH
+            );
+      
+            const renderW = imgW * ratio;
+            const renderH = imgH * ratio;
+      
+            // 🔥 altijd onderaan positioneren
+            const x = margin + (usableWidth - renderW) / 2;
+            const yImg = pageHeight - margin - renderH;
+      
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(12);
+            pdf.text("Bon", margin, yImg - 4);
+      
+            pdf.addImage(imgData, "PNG", x, yImg, renderW, renderH);
           }
       
           let filename = "uren-berekening";
